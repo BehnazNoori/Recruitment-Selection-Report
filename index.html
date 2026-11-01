@@ -1,33 +1,131 @@
 <!DOCTYPE html>
 <html lang="fa" dir="rtl">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vanilla | HR Dashboard</title>
-  <style>
-    body {
-      font-family: Tahoma, sans-serif;
-      background: #f5f1e9;
-      color: #263746;
-      text-align: center;
-      padding: 50px 20px;
-    }
-    .card {
-      background: white;
-      padding: 35px;
-      border-radius: 16px;
-      max-width: 600px;
-      margin: 40px auto;
-    }
-    h1 { color: #263746; }
-    p { color: #8b795e; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vanilla | HR Analytics</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#f5f1e9;color:#263746;font-family:Tahoma,sans-serif}
+header{background:#243746;color:white;padding:25px 5%;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px}
+header h2{margin:0;font-size:20px}
+header span{color:#d5bd91;font-size:12px}
+main{max-width:1250px;margin:auto;padding:28px 20px}
+h1{font-size:23px;margin:0 0 8px}
+.sub{color:#7b8187;font-size:13px;margin-bottom:25px}
+.filters{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:22px}
+select{padding:11px;border:1px solid #ddd5c7;border-radius:8px;background:white;color:#263746}
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:15px}
+.card,.panel{background:white;border-radius:13px;padding:20px;box-shadow:0 3px 15px #2437460c}
+.card small{color:#858585}
+.card h2{font-size:29px;margin:14px 0 0;color:#263746}
+.panel{margin-top:20px}
+.panel h3{font-size:16px;margin:0 0 20px}
+.charts{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.chartbox{height:280px;position:relative}
+.note{font-size:11px;color:#999;margin-top:18px}
+footer{text-align:center;padding:25px;color:#888;font-size:11px}
+@media(max-width:750px){
+.cards{grid-template-columns:repeat(2,1fr)}
+.charts{grid-template-columns:1fr}
+header{padding:20px}
+}
+@media(max-width:420px){.cards{grid-template-columns:1fr}}
+</style>
 </head>
 <body>
-  <div class="card">
-    <h1>Vanilla HR Dashboard</h1>
-    <p>Recruitment & Selection Analytics</p>
-    <p>داشبورد مدیریتی جذب و استخدام وانیلا</p>
-  </div>
+<header>
+<h2>VANILLA | HR ANALYTICS</h2>
+<span>HUMAN RESOURCES MANAGEMENT</span>
+</header>
+<main>
+<h1>گزارش مدیریتی جذب و استخدام</h1>
+<p class="sub">تحلیل وضعیت درخواست‌های جذب، منابع تأمین نیرو و نتایج استخدام</p>
+
+<div class="filters">
+<select id="branch">
+<option value="all">تمام شعب و واحدها</option>
+<option value="Pasdaran">پاسداران</option>
+<option value="Fereshteh">فرشته</option>
+<option value="Jordan">جردن</option>
+<option value="Sanaye">صنایع</option>
+<option value="Qods">کارگاه قدسی</option>
+</select>
+<select id="period">
+<option value="all">تمام دوره‌ها</option>
+<option value="Mehr">مهر</option>
+<option value="Aban">آبان</option>
+</select>
+</div>
+
+<section class="cards">
+<div class="card"><small>درخواست‌های جذب</small><h2 id="requests">24</h2></div>
+<div class="card"><small>رزومه‌های دریافتی</small><h2 id="cvs">380</h2></div>
+<div class="card"><small>مصاحبه انجام‌شده</small><h2 id="interviews">86</h2></div>
+<div class="card"><small>شروع به همکاری</small><h2 id="hires">19</h2></div>
+</section>
+
+<section class="charts">
+<div class="panel">
+<h3>قیف جذب و استخدام</h3>
+<div class="chartbox"><canvas id="funnel"></canvas></div>
+</div>
+<div class="panel">
+<h3>وضعیت درخواست‌های جذب</h3>
+<div class="chartbox"><canvas id="status"></canvas></div>
+</div>
+<div class="panel">
+<h3>منابع تأمین نیرو</h3>
+<div class="chartbox"><canvas id="sources"></canvas></div>
+</div>
+<div class="panel">
+<h3>مقایسه تعداد استخدام در شعب</h3>
+<div class="chartbox"><canvas id="branches"></canvas></div>
+</div>
+</section>
+<p class="note">توجه: اطلاعات این نسخه صرفاً نمونه نمایشی است و هنوز به فایل اطلاعاتی متصل نشده است.</p>
+</main>
+<footer>VANILLA HR | Recruitment & Selection Analytics</footer>
+
+<script>
+const data = [
+{branch:"Pasdaran",period:"Mehr",requests:6,cvs:100,interviews:24,hires:5,open:2,complete:3,stopped:1,source:[40,20,25,15]},
+{branch:"Fereshteh",period:"Mehr",requests:5,cvs:80,interviews:20,hires:4,open:2,complete:2,stopped:1,source:[30,25,30,15]},
+{branch:"Jordan",period:"Aban",requests:4,cvs:65,interviews:14,hires:3,open:2,complete:1,stopped:1,source:[35,25,20,20]},
+{branch:"Sanaye",period:"Aban",requests:5,cvs:75,interviews:16,hires:4,open:2,complete:2,stopped:1,source:[25,30,25,20]},
+{branch:"Qods",period:"Mehr",requests:4,cvs:60,interviews:12,hires:3,open:1,complete:2,stopped:1,source:[30,20,30,20]}
+];
+let charts={};
+function total(rows,key){return rows.reduce((s,r)=>s+r[key],0)}
+function draw(id,type,labels,values){
+if(charts[id])charts[id].destro
+
+y();
+charts[id]=new Chart(document.getElementById(id),{
+type:type,
+data:{labels:labels,datasets:[{data:values,backgroundColor:['#243746','#b69a69','#8d9a91','#d8c7a5','#a5aeb5'],borderWidth:0,borderRadius:5}]},
+options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}
+});
+}
+function update(){
+const b=document.getElementById('branch').value;
+const p=document.getElementById('period').value;
+const rows=data.filter(r=>(b==='all'||r.branch===b)&&(p==='all'||r.period===p));
+document.getElementById('requests').textContent=total(rows,'requests');
+document.getElementById('cvs').textContent=total(rows,'cvs');
+document.getElementById('interviews').textContent=total(rows,'interviews');
+document.getElementById('hires').textContent=total(rows,'hires');
+draw('funnel','bar',['رزومه','مصاحبه','استخدام'],[total(rows,'cvs'),total(rows,'interviews'),total(rows,'hires')]);
+draw('status','doughnut',['باز','تکمیل‌شده','متوقف'],[total(rows,'open'),total(rows,'complete'),total(rows,'stopped')]);
+const src=[0,0,0,0];
+rows.forEach(r=>r.source.forEach((v,i)=>src[i]+=v));
+draw('sources','doughnut',['جاب‌ویژن','معرفی','اینستاگرام','سایر'],src);
+draw('branches','bar',rows.map(r=>r.branch),rows.map(r=>r.hires));
+}
+document.getElementById('branch').addEventListener('change',update);
+document.getElementById('period').addEventListener('change',update);
+update();
+</script>
 </body>
 </html>
