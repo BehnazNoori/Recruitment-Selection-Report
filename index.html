@@ -89,43 +89,192 @@ header{padding:20px}
 <footer>VANILLA HR | Recruitment & Selection Analytics</footer>
 
 <script>
-const data = [
-{branch:"Pasdaran",period:"Mehr",requests:6,cvs:100,interviews:24,hires:5,open:2,complete:3,stopped:1,source:[40,20,25,15]},
-{branch:"Fereshteh",period:"Mehr",requests:5,cvs:80,interviews:20,hires:4,open:2,complete:2,stopped:1,source:[30,25,30,15]},
-{branch:"Jordan",period:"Aban",requests:4,cvs:65,interviews:14,hires:3,open:2,complete:1,stopped:1,source:[35,25,20,20]},
-{branch:"Sanaye",period:"Aban",requests:5,cvs:75,interviews:16,hires:4,open:2,complete:2,stopped:1,source:[25,30,25,20]},
-{branch:"Qods",period:"Mehr",requests:4,cvs:60,interviews:12,hires:3,open:1,complete:2,stopped:1,source:[30,20,30,20]}
-];
-let charts={};
-function total(rows,key){return rows.reduce((s,r)=>s+r[key],0)}
-function draw(id,type,labels,values){
-if(charts[id])charts[id].destro
+let data = [];
+let charts = {};
 
-y();
-charts[id]=new Chart(document.getElementById(id),{
-type:type,
-data:{labels:labels,datasets:[{data:values,backgroundColor:['#243746','#b69a69','#8d9a91','#d8c7a5','#a5aeb5'],borderWidth:0,borderRadius:5}]},
-options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'}}}
-});
+const API_URL = "https://script.google.com/macros/s/AKfycbw-K7ifh76ASs3zuV_R-d-7tI7CU8rSlje385BLXQ1ccDOGZqI6qjhmiUtCr5Nb4io/exec";
+
+// تبدیل تاریخ شمسی به ماه برای فیلتر دوره
+function getPeriod(date) {
+  if (!date) return "";
+  const parts = String(date).split(/[\/\-]/);
+  if (parts.length < 2) return "";
+  const month = parts[1].trim();
+  if (month === "07" || month === "7") return "Mehr";
+  if (month === "08" || month === "8") return "Aban";
+  return month;
 }
-function update(){
-const b=document.getElementById('branch').value;
-const p=document.getElementById('period').value;
-const rows=data.filter(r=>(b==='all'||r.branch===b)&&(p==='all'||r.period===p));
-document.getElementById('requests').textContent=total(rows,'requests');
-document.getElementById('cvs').textContent=total(rows,'cvs');
-document.getElementById('interviews').textContent=total(rows,'interviews');
-document.getElementById('hires').textContent=total(rows,'hires');
-draw('funnel','bar',['رزومه','مصاحبه','استخدام'],[total(rows,'cvs'),total(rows,'interviews'),total(rows,'hires')]);
-draw('status','doughnut',['باز','تکمیل‌شده','متوقف'],[total(rows,'open'),total(rows,'complete'),total(rows,'stopped')]);
-const src=[0,0,0,0];
-rows.forEach(r=>r.source.forEach((v,i)=>src[i]+=v));
-draw('sources','doughnut',['جاب‌ویژن','معرفی','اینستاگرام','سایر'],src);
-draw('branches','bar',rows.map(r=>r.branch),rows.map(r=>r.hires));
+
+// هماهنگ کردن نام شعب با فیلتر داشبورد
+const branchAliases = {
+  Pasdaran: ["Pasdaran", "پاسداران"],
+  Fereshteh: ["Fereshteh", "فرشته"],
+  Jordan: ["Jordan", "جردن"],
+  Sanaye: ["Sanaye", "صنایع"],
+  Qods: ["Qods", "قدسی", "کارگاه قدسی"]
+};
+
+function branchMatches(value, selected) {
+  if (selected === "all") return true;
+  return (branchAliases[selected] || [selected])
+    .includes(String(value).trim());
 }
-document.getElementById('branch').addEventListener('change',update);
-document.getElementById('period').addEventListener('change',update);
-update();
+
+function total(rows, key) {
+  return rows.reduce((sum, row) => sum + (Number(row[key]) || 0), 0);
+}
+
+// ساخت و به‌روزرسانی نمودارها
+function draw(id, type, labels, values) {
+  if (charts[id]) {
+    charts[id].destroy();
+  }
+
+  charts[id] = new Chart(document.getElementById(id), {
+    type: type,
+    data: {
+      labels: labels,
+      datasets: [{
+        data: values,
+        backgroundColor: [
+          "#243746", "#b69a69", "#8d9a91",
+          "#d8c7a5", "#a5aeb5", "#647d8b",
+          "#c4a77d", "#9a8772"
+        ],
+        borderWidth: 0,
+        borderRadius: 5
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: "bottom" }
+      }
+    }
+  });
+}
+
+// فیلتر و محاسبه شاخص‌ها
+function update() {
+  const selectedBranch = document.getElementById("branch").value;
+  const selectedPeriod = document.getElementById("period").value;
+
+  const rows = data.filter(row =>
+    branchMatches(row.branch, selectedBranch) &&
+    (selectedPeriod === "all" || row.period === selectedPeriod)
+  );
+
+  // شاخص‌های اصلی
+  document.getElementById("requests").textContent = rows.length;
+  document.getElementById("cvs").textContent = total(rows, "cvs");
+  document.getElementById("interviews").textContent = total(rows, "interviews");
+  document.getElementById("hires").textContent = total(rows, "hires");
+
+  // قیف جذب
+  draw("funnel", "bar",
+    ["رزومه دریافتی", "بررسی اولیه", "مصاحبه", "تأیید نهایی", "شروع همکاری"],
+    [
+      total(rows, "cvs"),
+      total(rows, "screening"),
+      total(rows, "interviews"),
+      total(rows, "approved"),
+      total(rows, "hires")
+    ]
+  );
+
+  // وضعیت درخواست‌ها
+  const statusCounts = {};
+  rows.forEach(row => {
+    const status = row.status || "نامشخص";
+    statusCounts[status] = (statusCounts[status] || 0) + 1;
+  });
+
+  draw("status", "doughnut",
+    Object.keys(statusCounts),
+    Object.values(statusCounts)
+  );
+
+  // منابع جذب
+  const sourceCounts = {};
+  rows.forEach(row => {
+    const source = row.source || "نامشخص";
+    sourceCounts[source] = (sourceCounts[source] || 0) + 1;
+  });
+
+  draw("sources", "doughnut",
+    Object.keys(sourceCounts),
+    Object.values(sourceCounts)
+  );
+
+  // مقایسه استخدام شعب
+  const branchCounts = {};
+  rows.forEach(row => {
+    const branch = row.branch || "نامشخص";
+    branchCounts[branch] = (branchCounts[branch] || 0) + (Number(row.hires) || 0);
+  });
+
+  draw("branches", "bar",
+    Object.keys(branchCounts),
+    Object.values(branchCounts)
+  );
+}
+
+// دریافت اطلاعات از Google Sheets
+async function loadRecruitmentData() {
+  try {
+    const response = await fetch(API_URL);
+
+    if (!response.ok) {
+      throw new Error("API response error: " + response.status);
+    }
+
+    const result = await response.json();
+
+    if (!result.data || result.data.length < 2) {
+      throw new Error("No recruitment records found");
+    }
+
+    data = result.data.slice(1)
+      .filter(row => row.some(cell => cell !== ""))
+      .map(row => ({
+        code: row[0],
+        job: row[1],
+        branch: row[2],
+        requestDate: row[3],
+        publishDate: row[4],
+        period: getPeriod(row[3]),
+        c
+
+vs: Number(row[5]) || 0,
+        screening: Number(row[6]) || 0,
+        invited: Number(row[7]) || 0,
+        interviews: Number(row[8]) || 0,
+        approved: Number(row[9]) || 0,
+        offers: Number(row[10]) || 0,
+        accepted: Number(row[11]) || 0,
+        hires: Number(row[12]) || 0,
+        status: row[13],
+        source: row[14],
+        notes: row[15]
+      }));
+
+    update();
+
+    document.querySelector(".note").textContent =
+      "اطلاعات از فایل Google Sheets دریافت شده است.";
+
+  } catch (error) {
+    console.error("Recruitment data error:", error);
+    document.querySelector(".note").textContent =
+      "خطا در دریافت اطلاعات: " + error.message;
+  }
+}
+
+document.getElementById("branch").addEventListener("change", update);
+document.getElementById("period").addEventListener("change", update);
+
+loadRecruitmentData();
 </script>
 </body>
 </html>
